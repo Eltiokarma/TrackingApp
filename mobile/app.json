@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "TrackingApp",
+    "slug": "tracking-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1B5E20"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Necesitamos tu ubicación para mostrar tu posición en el mapa y compartirla con otros conductores.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Necesitamos tu ubicación en segundo plano para mantener el seguimiento activo mientras conduces.",
+        "NSLocationAlwaysUsageDescription": "Necesitamos tu ubicación en segundo plano para mantener el seguimiento activo mientras conduces."
+      }
+    },
+    "android": {
+      "package": "com.tracking.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1B5E20"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "VIBRATE"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": ""
+        }
+      }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Necesitamos tu ubicación para mostrar tu posición en el mapa.",
+          "locationAlwaysPermission": "Necesitamos tu ubicación en segundo plano para el seguimiento.",
+          "locationWhenInUsePermission": "Necesitamos tu ubicación para mostrar tu posición en el mapa."
+        }
+      ]
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "tracking-app-backend",
+  "version": "1.0.0",
+  "description": "Backend para app de rastreo de transporte en tiempo real",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "socket.io": "^4.7.5",
+    "uuid": "^9.0.1"
+  }
+}
