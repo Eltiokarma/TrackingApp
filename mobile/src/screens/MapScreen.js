@@ -18,7 +18,7 @@ const { width } = Dimensions.get('window');
 const LOCATION_INTERVAL = 3000;
 
 export default function MapScreen({ route }) {
-  const { unitData } = route.params;
+  const { unitData, serverUrl } = route.params;
   const { driverName, unitNumber, line } = unitData;
 
   const [myLocation, setMyLocation] = useState(null);
@@ -35,7 +35,7 @@ export default function MapScreen({ route }) {
   useEffect(() => {
     async function registerWithServer() {
       try {
-        const response = await fetch('http://10.0.2.2:3000/api/units/register', {
+        const response = await fetch(`${serverUrl}/api/units/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

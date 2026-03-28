@@ -25,7 +25,8 @@ const LINE_ICONS = {
   'Línea Verde': { color: COLORS.lineVerde },
 };
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, route }) {
+  const { serverUrl } = route.params || {};
   const [driverName, setDriverName] = useState('');
   const [unitNumber, setUnitNumber] = useState('');
   const [selectedLine, setSelectedLine] = useState('');
@@ -52,7 +53,7 @@ export default function LoginScreen({ navigation }) {
     setConnecting(true);
 
     try {
-      const socket = connect();
+      const socket = connect(serverUrl);
 
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
@@ -83,7 +84,7 @@ export default function LoginScreen({ navigation }) {
 
       registerUnit(unitData);
 
-      navigation.replace('Map', { unitData });
+      navigation.replace('Map', { unitData, serverUrl });
     } catch (err) {
       Alert.alert(
         'Error de conexión',

@@ -212,6 +212,156 @@ io.on('connection', (socket) => {
 });
 
 // ---------------------------------------------------------------------------
+// Simulación — unidades ficticias moviéndose en el mapa
+// ---------------------------------------------------------------------------
+let simulationIntervals = [];
+let simulatedUnitIds = [];
+let simulationRunning = false;
+
+const SIM_UNITS = [
+  { name: 'Simón (Bot)', unitNumber: 91 },
+  { name: 'Carlos (Bot)', unitNumber: 92 },
+  { name: 'María (Bot)', unitNumber: 93 },
+  { name: 'Pedro (Bot)', unitNumber: 94 }
+];
+
+// ~30 km/h = ~8.33 m/s. En 3 segundos recorre ~25 metros.
+// 25 metros en grados ≈ 0.000225 (latitud) o similar en longitud.
+const SIM_INTERVAL_MS = 3000;
+const STEP_SIZE = 0.000225; // ~25 m por tick
+
+app.post('/api/simulation/start', (req, res) => {
+  if (simulationRunning) {
+    return res.status(400).json({ error: 'La simulación ya está en ejecución' });
+  }
+
+  const centerLat = req.body.latitude ?? -34.6037;
+  const centerLon = req.body.longitude ?? -58.3816;
+
+  const createdUnits = [];
+
+  // Direcciones de movimiento para cada unidad:
+  // Unidades 0 y 1 van en dirección similar (norte-noreste) pero con offset,
+  // para que se crucen y disparen alertas de proximidad.
+  // Unidades 2 y 3 van en otras direcciones.
+  const directions = [
+    { dLat: 1.0, dLon: 0.3 },   // Simón: norte-noreste
+    { dLat: 0.9, dLon: 0.4 },   // Carlos: norte-noreste (similar a Simón)
+    { dLat: -0.7, dLon: 0.7 },  // María: sureste
+    { dLat: 0.0, dLon: -1.0 }   // Pedro: oeste
+  ];
+
+  // Offsets iniciales — Simón y Carlos arrancan muy cerca (~200m de diferencia)
+  const startOffsets = [
+    { lat: 0.0005, lon: 0.0005 },
+    { lat: 0.0010, lon: 0.0008 },
+    { lat: -0.003, lon: 0.002 },
+    { lat: 0.002, lon: -0.003 }
+  ];
+
+  SIM_UNITS.forEach((simDef, idx) => {
+    const id = uuidv4();
+    const startLat = centerLat + startOffsets[idx].lat;
+    const startLon = centerLon + startOffsets[idx].lon;
+
+    const unit = {
+      id,
+      visibleId: visibleIdCounter++,
+      name: simDef.name,
+      lineNumber: 'Línea Roja',
+      unitNumber: simDef.unitNumber,
+      latitude: startLat,
+      longitude: startLon,
+      speed: 30,
+      heading: 0,
+      lastUpdate: new Date().toISOString(),
+      active: true,
+      socketId: null,
+      simulated: true
+    };
+
+    units.set(id, unit);
+    simulatedUnitIds.push(id);
+    createdUnits.push(unit);
+
+    console.log(`🤖 Unidad simulada creada: "${simDef.name}" (número ${simDef.unitNumber}) — ID: ${id}`);
+
+    // Movimiento periódico
+    const dir = directions[idx];
+    let tick = 0;
+
+    const interval = setInterval(() => {
+      tick++;
+
+      // Agregar un poco de variación sinusoidal para que las rutas no sean perfectamente rectas
+      const wobble = Math.sin(tick * 0.15) * 0.3;
+      const dLat = (dir.dLat + wobble * dir.dLon) * STEP_SIZE;
+      const dLon = (dir.dLon - wobble * dir.dLat) * STEP_SIZE;
+
+      unit.latitude += dLat;
+      unit.longitude += dLon;
+      unit.heading = (Math.atan2(dLon, dLat) * 180) / Math.PI;
+      unit.speed = 28 + Math.random() * 6; // 28-34 km/h
+      unit.lastUpdate = new Date().toISOString();
+
+      // Broadcast igual que una unidad real
+      io.emit('location-update', {
+        unitId: unit.id,
+        visibleId: unit.visibleId,
+        name: unit.name,
+        lineNumber: unit.lineNumber,
+        unitNumber: unit.unitNumber,
+        latitude: unit.latitude,
+        longitude: unit.longitude,
+        speed: unit.speed,
+        heading: unit.heading,
+        lastUpdate: unit.lastUpdate
+      });
+
+      // Verificar proximidad
+      checkProximity(unit);
+    }, SIM_INTERVAL_MS);
+
+    simulationIntervals.push(interval);
+  });
+
+  simulationRunning = true;
+  console.log(`🤖 Simulación iniciada con ${createdUnits.length} unidades en (${centerLat}, ${centerLon})`);
+
+  res.status(201).json({ message: 'Simulación iniciada', units: createdUnits });
+});
+
+app.post('/api/simulation/stop', (_req, res) => {
+  if (!simulationRunning) {
+    return res.status(400).json({ error: 'No hay simulación en ejecución' });
+  }
+
+  // Detener intervalos
+  simulationIntervals.forEach((iv) => clearInterval(iv));
+  simulationIntervals = [];
+
+  // Marcar unidades simuladas como inactivas
+  simulatedUnitIds.forEach((id) => {
+    const unit = units.get(id);
+    if (unit) {
+      unit.active = false;
+      console.log(`🤖 Unidad simulada detenida: "${unit.name}" (${id})`);
+    }
+  });
+
+  simulatedUnitIds = [];
+  simulationRunning = false;
+
+  console.log('🤖 Simulación detenida');
+  res.json({ message: 'Simulación detenida' });
+});
+
+app.get('/api/simulation/status', (_req, res) => {
+  const simUnits = simulatedUnitIds.map((id) => units.get(id)).filter(Boolean);
+  res.json({ running: simulationRunning, units: simUnits });
+});
+
+// ---------------------------------------------------------------------------
 // Iniciar servidor
 // ---------------------------------------------------------------------------
 const PORT = process.env.PORT || 3000;
